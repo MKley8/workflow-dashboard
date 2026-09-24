@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // True if the caller's own profile document has isAdmin == true.
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Shared catalog of workflow apps. Any signed-in user can read/write so
+    // apps can be added, edited, or removed from the "Manage Apps" screen
+    // without a code deploy. To restrict management to admins only, change
+    // "allow write" below to `if isAdmin();`.
+    match /apps/{appId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Account profiles (email + isAdmin flag). A user can always read/create
+    // their own profile, and update it as long as they don't touch isAdmin
+    // themselves (blocking self-promotion) - admins can read and write any
+    // profile, including isAdmin, so they can manage other accounts.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        request.resource.data.isAdmin == false;
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && request.resource.data.isAdmin == resource.data.isAdmin) ||
+        isAdmin()
+      );
+
+      // Per-user app layout (visibility/order overrides on the shared
+      // catalog). The owner can read their own layout so their dashboard
+      // reflects it, but only admins can write it - matching that only
+      // admins may edit any account's app layout.
+      match /apps/{appId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow write: if isAdmin();
+      }
+    }
+  }
+}
