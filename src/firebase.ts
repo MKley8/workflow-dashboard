@@ -1,6 +1,10 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 
 /**
  * Firebase configuration is read from Vite env vars so the same build can
@@ -20,4 +24,25 @@ const firebaseConfig: FirebaseOptions = {
 
 export const firebaseApp = initializeApp(firebaseConfig)
 export const auth = getAuth(firebaseApp)
-export const db = getFirestore(firebaseApp)
+
+/**
+ * Enables Firestore's IndexedDB-backed persistent local cache (shared
+ * across browser tabs). This is the single biggest lever for cutting
+ * billed document reads: realtime `onSnapshot` listeners resume from the
+ * on-disk cache on every reload/new tab instead of re-fetching every
+ * document from the server, and cached data is available immediately
+ * (and offline). Falls back to Firestore's default (memory-only) cache
+ * if persistence can't be enabled, e.g. in some private-browsing modes.
+ */
+function createFirestoreWithCache() {
+  try {
+    return initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch (err) {
+    console.warn('Persistent Firestore cache unavailable, falling back to in-memory cache:', err)
+    return initializeFirestore(firebaseApp, {})
+  }
+}
+
+export const db = createFirestoreWithCache()

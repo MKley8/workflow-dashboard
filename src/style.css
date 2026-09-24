@@ -1,32 +1,175 @@
-:root {
+/*
+ * Theme variable palettes. Each accessible page sets `data-theme` on
+ * <html> (see src/stores/theme.ts); components should style themselves
+ * using these variables rather than hardcoded colours, so every theme
+ * "just works" everywhere. Add a new theme by adding another block here
+ * plus an entry in src/types/theme.ts.
+ */
+:root,
+[data-theme='midnight'] {
   color-scheme: dark;
   --bg: #0f1218;
+  --surface: #1c212b;
+  --surface-2: #10141c;
+  --surface-hover: #232a37;
   --text: #f5f6fa;
+  --text-muted: rgba(245, 246, 250, 0.65);
+  --text-muted-2: rgba(245, 246, 250, 0.5);
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #6366f1;
+  --accent-2: #818cf8;
+  --accent-contrast: #ffffff;
+  --danger: #f87171;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
 
-  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+[data-theme='slate'] {
+  color-scheme: dark;
+  --bg: #14171b;
+  --surface: #1e2227;
+  --surface-2: #14161a;
+  --surface-hover: #272c32;
+  --text: #eef0f3;
+  --text-muted: rgba(238, 240, 243, 0.65);
+  --text-muted-2: rgba(238, 240, 243, 0.5);
+  --border: rgba(255, 255, 255, 0.09);
+  --accent: #14b8a6;
+  --accent-2: #2dd4bf;
+  --accent-contrast: #062824;
+  --danger: #fb7185;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='sunset'] {
+  color-scheme: dark;
+  --bg: #1a1114;
+  --surface: #251a1e;
+  --surface-2: #180f12;
+  --surface-hover: #302127;
+  --text: #fbeef0;
+  --text-muted: rgba(251, 238, 240, 0.68);
+  --text-muted-2: rgba(251, 238, 240, 0.5);
+  --border: rgba(255, 200, 180, 0.14);
+  --accent: #f97362;
+  --accent-2: #fb923c;
+  --accent-contrast: #2a0d08;
+  --danger: #f87171;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f4f8;
+  --surface: #ffffff;
+  --surface-2: #edeff4;
+  --surface-hover: #e3e6ee;
+  --text: #171a21;
+  --text-muted: rgba(23, 26, 33, 0.68);
+  --text-muted-2: rgba(23, 26, 33, 0.52);
+  --border: rgba(15, 18, 24, 0.1);
+  --accent: #4f46e5;
+  --accent-2: #6366f1;
+  --accent-contrast: #ffffff;
+  --danger: #dc2626;
+  --shadow: 0 12px 28px rgba(30, 32, 40, 0.12);
+}
+
+[data-theme='plant'] {
+  color-scheme: dark;
+  --bg: #0f1a12;
+  --surface: #16241a;
+  --surface-2: #0c150f;
+  --surface-hover: #1e2f22;
+  --text: #eaf5ec;
+  --text-muted: rgba(234, 245, 236, 0.65);
+  --text-muted-2: rgba(234, 245, 236, 0.5);
+  --border: rgba(210, 255, 220, 0.1);
+  --accent: #22c55e;
+  --accent-2: #4ade80;
+  --accent-contrast: #06210f;
+  --danger: #f87171;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='plant-light'] {
+  color-scheme: light;
+  --bg: #f2f7f0;
+  --surface: #ffffff;
+  --surface-2: #e7f0e3;
+  --surface-hover: #dcebd6;
+  --text: #16281a;
+  --text-muted: rgba(22, 40, 26, 0.68);
+  --text-muted-2: rgba(22, 40, 26, 0.52);
+  --border: rgba(22, 60, 30, 0.12);
+  --accent: #16a34a;
+  --accent-2: #22c55e;
+  --accent-contrast: #ffffff;
+  --danger: #dc2626;
+  --shadow: 0 12px 28px rgba(30, 50, 32, 0.12);
+}
+
+[data-theme='coffee'] {
+  color-scheme: dark;
+  --bg: #1a120c;
+  --surface: #251a12;
+  --surface-2: #150e09;
+  --surface-hover: #2f2116;
+  --text: #f5ece2;
+  --text-muted: rgba(245, 236, 226, 0.65);
+  --text-muted-2: rgba(245, 236, 226, 0.5);
+  --border: rgba(255, 235, 215, 0.1);
+  --accent: #c08552;
+  --accent-2: #d9a066;
+  --accent-contrast: #2a1508;
+  --danger: #f87171;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='coffee-light'] {
+  color-scheme: light;
+  --bg: #f7f0e6;
+  --surface: #fffaf3;
+  --surface-2: #efe3d2;
+  --surface-hover: #e6d6c0;
+  --text: #2b1d12;
+  --text-muted: rgba(43, 29, 18, 0.68);
+  --text-muted-2: rgba(43, 29, 18, 0.52);
+  --border: rgba(90, 60, 30, 0.14);
+  --accent: #8a5a2b;
+  --accent-2: #b6764a;
+  --accent-contrast: #ffffff;
+  --danger: #dc2626;
+  --shadow: 0 12px 28px rgba(60, 40, 20, 0.12);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
 body {
   margin: 0;
   min-height: 100svh;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
   /* Respect safe areas on notched mobile devices when wrapped by Capacitor. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
 
 h1,
-h2 {
+h2,
+h3 {
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 button {
@@ -35,4 +178,51 @@ button {
 
 a {
   color: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  accent-color: var(--accent);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Slim, theme-aware scrollbars for a more polished feel. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+/* Sleek icon glyphs (Google Fonts Material Symbols) used in place of emoji
+   for UI chrome - nav items, badges, buttons - anywhere there isn't a real
+   website favicon to show instead. */
+.icon {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
 }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import type { AppCategory, WorkflowApp, WorkflowAppInput } from '../types/app'
 import { useAuthStore } from '../stores/auth'
+import { faviconUrlFor } from '../utils/favicon'
 
-const props = defineProps<{ app?: WorkflowApp | null }>()
+const props = defineProps<{ app?: WorkflowApp | null; restricted?: boolean }>()
 const emit = defineEmits<{
   save: [input: WorkflowAppInput]
   close: []
@@ -40,6 +41,7 @@ const form = reactive<WorkflowAppInput>({
   loginMethod: 'manual',
   loginUsername: '',
   googleAuthUrl: '',
+  ownerIsAdmin: false,
 })
 
 watch(
@@ -62,6 +64,7 @@ watch(
       loginMethod: app?.loginMethod ?? 'manual',
       loginUsername: app?.loginUsername ?? '',
       googleAuthUrl: app?.googleAuthUrl ?? '',
+      ownerIsAdmin: app?.ownerIsAdmin ?? false,
     })
   },
   { immediate: true },
@@ -71,6 +74,9 @@ function submit() {
   if (!form.name.trim() || !form.url.trim()) return
   emit('save', { ...form })
 }
+
+/** Preview of the icon that will actually be shown: explicit iconUrl, or the auto-detected favicon. */
+const iconPreviewSrc = computed(() => form.iconUrl || faviconUrlFor(form.url))
 </script>
 
 <template>
@@ -78,17 +84,36 @@ function submit() {
     <form class="modal" @submit.prevent="submit">
       <h2>{{ app ? 'Edit App' : 'Add App' }}</h2>
 
-      <label>Name<input v-model="form.name" required placeholder="e.g. Team Chat" /></label>
-      <label>URL<input v-model="form.url" required placeholder="https://..." /></label>
-      <label>Description<input v-model="form.description" placeholder="Short description" /></label>
+      <p v-if="restricted" class="restricted-notice">
+        You can rename this app and change its sign-in method, but only an admin can change
+        its other details or remove it. You can still hide it from just your own dashboard
+        from the Manage Apps list.
+      </p>
+
+      <label>Name<input v-model="form.name" required placeholder="e.g. Shiftly" /></label>
+      <label>URL<input v-model="form.url" required placeholder="https://..." :disabled="restricted" /></label>
+      <label>
+        Description
+        <input v-model="form.description" placeholder="Short description" :disabled="restricted" />
+      </label>
       <label>
         Category
-        <select v-model="form.category">
+        <select v-model="form.category" :disabled="restricted">
           <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
         </select>
       </label>
-      <label>Brand colour<input v-model="form.color" type="color" /></label>
-      <label>Icon URL<input v-model="form.iconUrl" placeholder="https://.../icon.png" /></label>
+      <label>Brand colour<input v-model="form.color" type="color" :disabled="restricted" /></label>
+      <label>
+        Icon URL (optional)
+        <input v-model="form.iconUrl" placeholder="https://.../icon.png" :disabled="restricted" />
+      </label>
+      <p class="hint-small">
+        Leave blank to auto-detect the site's favicon from its URL.
+      </p>
+      <div v-if="iconPreviewSrc" class="icon-preview">
+        <img :src="iconPreviewSrc" alt="Icon preview" />
+        <span>Preview</span>
+      </div>
 
       <fieldset>
         <legend>Sign-in method</legend>
@@ -124,6 +149,7 @@ function submit() {
             <input
               v-model="form.googleAuthUrl"
               placeholder="https://accounts.google.com/o/oauth2/v2/auth?..."
+              :disabled="restricted"
             />
           </label>
           <p class="google-hint">
@@ -143,13 +169,24 @@ function submit() {
 
       <fieldset>
         <legend>Native app redirect (optional)</legend>
-        <label>iOS URL scheme<input v-model="form.iosScheme" placeholder="myapp://" /></label>
-        <label>iOS App Store id<input v-model="form.iosAppStoreId" placeholder="id123456789" /></label>
-        <label>Android package<input v-model="form.androidPackage" placeholder="com.example.app" /></label>
-        <label>Android Play Store id<input v-model="form.androidPlayStoreId" placeholder="com.example.app" /></label>
+        <label>iOS URL scheme<input v-model="form.iosScheme" placeholder="myapp://" :disabled="restricted" /></label>
+        <label>
+          iOS App Store id
+          <input v-model="form.iosAppStoreId" placeholder="id123456789" :disabled="restricted" />
+        </label>
+        <label>
+          Android package
+          <input v-model="form.androidPackage" placeholder="com.example.app" :disabled="restricted" />
+        </label>
+        <label>
+          Android Play Store id
+          <input v-model="form.androidPlayStoreId" placeholder="com.example.app" :disabled="restricted" />
+        </label>
       </fieldset>
 
-      <label class="row"><input v-model="form.enabled" type="checkbox" /> Enabled</label>
+      <label class="row">
+        <input v-model="form.enabled" type="checkbox" :disabled="restricted" /> Enabled
+      </label>
 
       <div class="actions">
         <button type="button" class="secondary" @click="emit('close')">Cancel</button>
@@ -172,7 +209,7 @@ function submit() {
 }
 
 .modal {
-  background: #1c212b;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
   width: 100%;
@@ -201,9 +238,15 @@ input,
 select {
   padding: 0.5rem 0.6rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #10141c;
-  color: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 input[type='color'] {
@@ -211,8 +254,17 @@ input[type='color'] {
   height: 2.25rem;
 }
 
+.restricted-notice {
+  font-size: 0.8rem;
+  color: var(--accent-2);
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin: 0;
+}
+
 fieldset {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.75rem;
   display: flex;
@@ -222,7 +274,7 @@ fieldset {
 
 legend {
   font-size: 0.75rem;
-  color: rgba(245, 246, 250, 0.6);
+  color: var(--text-muted);
   padding: 0 0.25rem;
 }
 
@@ -230,7 +282,7 @@ legend {
   display: flex;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border);
 }
 
 .segmented button {
@@ -239,26 +291,50 @@ legend {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: rgba(245, 246, 250, 0.7);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 500;
 }
 
 .segmented button.active {
-  background: #4f46e5;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-weight: 600;
 }
 
 .google-hint {
   font-size: 0.75rem;
-  color: rgba(245, 246, 250, 0.7);
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
 }
 
 .google-hint.warning {
   color: #fbbf77;
+}
+
+.hint-small {
+  font-size: 0.7rem;
+  color: var(--text-muted-2);
+  margin: -0.4rem 0 0;
+}
+
+.icon-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.icon-preview img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  object-fit: contain;
+  padding: 4px;
+  box-sizing: border-box;
 }
 
 .actions {
@@ -272,15 +348,15 @@ button {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   border: none;
-  background: #4f46e5;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   cursor: pointer;
   font-weight: 600;
 }
 
 button.secondary {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: inherit;
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 </style>

@@ -16,12 +16,13 @@ const toastStore = useToastStore()
   bottom: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
-  background: #1c212b;
-  color: #f5f6fa;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 0.6rem 1.1rem;
   border-radius: 999px;
   font-size: 0.85rem;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
   z-index: 200;
   max-width: 90vw;
   text-align: center;

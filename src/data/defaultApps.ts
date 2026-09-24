@@ -10,7 +10,7 @@ import type { WorkflowAppInput } from '../types/app'
  * These are illustrative example apps with placeholder URLs - swap them
  * out for your own team's tools from the "Manage Apps" screen.
  */
-export const defaultApps: WorkflowAppInput[] = [
+const rawDefaultApps: Omit<WorkflowAppInput, 'ownerIsAdmin'>[] = [
   {
     name: 'Shiftly',
     description: 'Staff scheduling & time clock',
@@ -98,3 +98,10 @@ export const defaultApps: WorkflowAppInput[] = [
     enabled: true,
   },
 ]
+
+// The seed catalog represents an illustrative "official" app list, so treat
+// it as admin-given (members can edit its name/sign-in but not remove it).
+export const defaultApps: WorkflowAppInput[] = rawDefaultApps.map((app) => ({
+  ...app,
+  ownerIsAdmin: true,
+}))

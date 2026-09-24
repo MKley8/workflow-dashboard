@@ -66,3 +66,18 @@ export async function setUserLayoutEntry(
     { merge: true },
   )
 }
+
+/**
+ * Hides/shows an app on just the signed-in user's own dashboard, leaving
+ * the shared catalog and everyone else's dashboard untouched. Self-service
+ * - any signed-in user may call this for their own `uid` (enforced by
+ * Firestore rules to only ever touch the `enabled` field), unlike
+ * `setUserLayoutEntry` above which is admin-only and can also set order.
+ */
+export async function setMyAppVisibility(uid: string, appId: string, enabled: boolean): Promise<void> {
+  await setDoc(
+    doc(db, USERS_COLLECTION, uid, LAYOUT_SUBCOLLECTION, appId),
+    { enabled, updatedAt: serverTimestamp() },
+    { merge: true },
+  )
+}

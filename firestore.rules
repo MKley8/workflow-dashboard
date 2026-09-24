@@ -12,35 +12,103 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Shared catalog of workflow apps. Any signed-in user can read/write so
-    // apps can be added, edited, or removed from the "Manage Apps" screen
-    // without a code deploy. To restrict management to admins only, change
-    // "allow write" below to `if isAdmin();`.
+    // Shared catalog of workflow apps. Any signed-in user can add an app.
+    // Regular (non-admin) members may only rename an app and change its own
+    // sign-in method (loginMethod/loginUsername) - never its URL,
+    // description, Google OAuth URL, or any other detail, and they can
+    // never remove an app (their own or anyone else's). Only admins can
+    // change every field or delete an app. Members can still hide any app
+    // from just their own dashboard via their personal layout override
+    // below, without affecting anyone else.
     match /apps/{appId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerIsAdmin == isAdmin();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'loginMethod', 'loginUsername', 'updatedAt'])
+      );
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     // Account profiles (email + isAdmin flag). A user can always read/create
     // their own profile, and update it as long as they don't touch isAdmin
     // themselves (blocking self-promotion) - admins can read and write any
-    // profile, including isAdmin, so they can manage other accounts.
+    // profile, including isAdmin, so they can manage other accounts. Any
+    // signed-in user may also read profiles that are themselves admins, so
+    // they can look up an admin to send a request to (see /adminRequests).
+    // A user can delete their own profile (account deletion); admins can
+    // delete any profile.
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isSignedIn() &&
+        (request.auth.uid == userId || isAdmin() || resource.data.isAdmin == true);
       allow create: if isSignedIn() && request.auth.uid == userId &&
         request.resource.data.isAdmin == false;
       allow update: if isSignedIn() && (
         (request.auth.uid == userId && request.resource.data.isAdmin == resource.data.isAdmin) ||
         isAdmin()
       );
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
 
       // Per-user app layout (visibility/order overrides on the shared
       // catalog). The owner can read their own layout so their dashboard
-      // reflects it, but only admins can write it - matching that only
-      // admins may edit any account's app layout.
+      // reflects it. Admins can create/edit any field (used to manage
+      // another account's layout/order from the Admin screen). The owner
+      // themselves may also create/edit their own entries, but only the
+      // `enabled` field - i.e. they can hide/show an app on just their own
+      // dashboard, without being able to touch the order an admin set for
+      // them. The owner may delete their own layout docs as part of
+      // deleting their account.
       match /apps/{appId} {
         allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-        allow write: if isAdmin();
+        allow create: if isAdmin() ||
+          (isSignedIn() && request.auth.uid == userId &&
+            request.resource.data.keys().hasOnly(['enabled', 'updatedAt']));
+        allow update: if isAdmin() ||
+          (isSignedIn() && request.auth.uid == userId &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['enabled', 'updatedAt']));
+        allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       }
+    }
+
+    // Free-text requests from any account to the admins (e.g. "please make
+    // me an admin", "please fix my layout"). Any admin can read and mark
+    // any request as read, regardless of which admin it was addressed to.
+    // The sender can read/delete only their own requests. The app enforces
+    // a 5-pending-request-per-user cap client-side (Firestore rules can't
+    // efficiently count existing documents), so this is a soft limit
+    // suitable for a small trusted team, not a hard security boundary.
+    match /adminRequests/{requestId} {
+      allow read: if isSignedIn() && (resource.data.fromUid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.read == false;
+      allow update: if isAdmin();
+      allow delete: if isSignedIn() && (resource.data.fromUid == request.auth.uid || isAdmin());
+    }
+
+    // To-do items. Anyone can create a task for themselves; only admins can
+    // assign a task to one or more other people. Any assignee or the
+    // creator can read/update(e.g. check off)/delete it; admins can manage
+    // any task.
+    match /todos/{todoId} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid in resource.data.assignedToUids ||
+          resource.data.createdByUid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.createdByUid == request.auth.uid &&
+        (
+          (request.resource.data.assignedToUids.size() == 1 &&
+            request.auth.uid in request.resource.data.assignedToUids) ||
+          isAdmin()
+        );
+      allow update: if isSignedIn() &&
+        (request.auth.uid in resource.data.assignedToUids ||
+          resource.data.createdByUid == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() &&
+        (request.auth.uid in resource.data.assignedToUids ||
+          resource.data.createdByUid == request.auth.uid || isAdmin());
     }
   }
 }

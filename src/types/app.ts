@@ -9,7 +9,7 @@
 export interface WorkflowApp {
   /** Firestore document id (assigned on create). */
   id: string
-  /** Display name, e.g. "Team Chat". */
+  /** Display name, e.g. "Shiftly". */
   name: string
   /** Short description shown under the name. */
   description?: string
@@ -23,7 +23,7 @@ export interface WorkflowApp {
   category?: AppCategory
   /**
    * Custom URL scheme used to try to open the native iOS app first,
-   * e.g. "teamchat://". Optional - if omitted, only the universal
+   * e.g. "slingapp://". Optional - if omitted, only the universal
    * link / system browser open is attempted.
    */
   iosScheme?: string
@@ -31,7 +31,7 @@ export interface WorkflowApp {
   iosAppStoreId?: string
   /**
    * Android package name / intent scheme used to try to open the native
-   * Android app first, e.g. "com.example.teamchat".
+   * Android app first, e.g. "com.example.shiftly".
    */
   androidPackage?: string
   /** Optional custom Android intent scheme (rarely needed; falls back to package). */
@@ -66,6 +66,12 @@ export interface WorkflowApp {
   /** ISO timestamp strings, set by Firestore service. */
   createdAt?: string
   updatedAt?: string
+  /**
+   * Whether the account that created this app was an admin at creation
+   * time. Admin-given apps can't be removed by regular members, and
+   * members editing one may only change its name and sign-in method.
+   */
+  ownerIsAdmin: boolean
 }
 
 export type AppCategory =

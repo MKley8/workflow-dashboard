@@ -2,14 +2,21 @@ import { defineStore } from 'pinia'
 import type { User } from 'firebase/auth'
 import {
   consumeGoogleRedirectResult,
+  deleteCurrentUser,
   register,
   signIn,
   signInWithGoogle,
   signOut,
   watchAuthState,
 } from '../services/authService'
-import { ensureUserProfile } from '../services/userService'
+import { deleteUserProfileData, ensureUserProfile } from '../services/userService'
+import { deleteAllMyRequests } from '../services/adminRequestService'
 import { useAppsStore } from './apps'
+import { useThemeStore } from './theme'
+import { useDashboardLayoutStore } from './dashboardLayout'
+import { useAdminRequestsStore } from './adminRequests'
+import { useTodosStore } from './todos'
+import { useAdminStore } from './admin'
 
 interface AuthState {
   user: User | null
@@ -62,7 +69,14 @@ export const useAuthStore = defineStore('auth', {
           this.user = user
           if (user) {
             try {
-              this.isAdmin = await ensureUserProfile(user)
+              const profile = await ensureUserProfile(user)
+              this.isAdmin = profile.isAdmin
+              useThemeStore().setFromAccount(profile.theme, profile.fillCategoryWidth)
+              useDashboardLayoutStore().setFromAccount(
+                profile.showTileDescriptions,
+                profile.tileDensity,
+                profile.sortCategoriesAlphabetically,
+              )
             } catch (err) {
               console.warn('Could not load user profile:', err)
               this.isAdmin = false
@@ -117,9 +131,33 @@ export const useAuthStore = defineStore('auth', {
       await signOut()
       this.user = null
       this.isAdmin = false
-      // Reset the shared apps store so its per-account layout subscription
-      // is torn down; the next sign-in re-subscribes for the new account.
+      // Reset per-account subscriptions so the next sign-in starts fresh
+      // instead of showing the previous account's cached data.
       useAppsStore().teardown()
+      useAdminRequestsStore().teardown()
+      useTodosStore().teardown()
+      useAdminStore().teardown()
+    },
+    /**
+     * Permanently deletes the signed-in account: its Firestore profile/layout
+     * data, its own admin requests, and the Firebase Auth user itself. If
+     * Firebase requires a more recent sign-in for this, the caller should
+     * catch the thrown error and prompt the user to sign out/in and retry.
+     */
+    async deleteAccount() {
+      const uid = this.user?.uid
+      if (!uid) throw new Error('No signed-in user to delete.')
+
+      await deleteUserProfileData(uid)
+      await deleteAllMyRequests(uid)
+      await deleteCurrentUser()
+
+      this.user = null
+      this.isAdmin = false
+      useAppsStore().teardown()
+      useAdminRequestsStore().teardown()
+      useTodosStore().teardown()
+      useAdminStore().teardown()
     },
   },
 })

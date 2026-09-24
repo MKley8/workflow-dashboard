@@ -89,9 +89,11 @@ async function save() {
               {{ row.name }}
             </label>
             <div class="row__actions">
-              <button type="button" :disabled="index === 0" @click="moveUp(index)">↑</button>
+              <button type="button" :disabled="index === 0" @click="moveUp(index)">
+                <span class="icon">arrow_upward</span>
+              </button>
               <button type="button" :disabled="index === rows.length - 1" @click="moveDown(index)">
-                ↓
+                <span class="icon">arrow_downward</span>
               </button>
             </div>
           </li>
@@ -121,7 +123,7 @@ async function save() {
 }
 
 .modal {
-  background: #1c212b;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
   width: 100%;
@@ -140,23 +142,23 @@ h2 {
 .subtitle {
   margin: 0;
   font-size: 0.8rem;
-  color: rgba(245, 246, 250, 0.6);
+  color: var(--text-muted);
 }
 
 .hint {
   font-size: 0.75rem;
-  color: rgba(245, 246, 250, 0.6);
+  color: var(--text-muted);
   margin: 0;
 }
 
 .status {
   text-align: center;
   padding: 1rem;
-  color: rgba(245, 246, 250, 0.7);
+  color: var(--text-muted);
 }
 
 .status.error {
-  color: #f87171;
+  color: var(--danger);
 }
 
 .rows {
@@ -174,7 +176,7 @@ h2 {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.6rem;
-  background: #10141c;
+  background: var(--surface-2);
   border-radius: 8px;
 }
 
@@ -191,12 +193,18 @@ h2 {
 }
 
 .row__actions button {
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem 0.4rem;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border);
   background: transparent;
-  color: inherit;
+  color: var(--text);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.row__actions button .icon {
+  font-size: 16px;
 }
 
 .row__actions button:disabled {
@@ -215,8 +223,8 @@ h2 {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   border: none;
-  background: #4f46e5;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   cursor: pointer;
   font-weight: 600;
 }
@@ -228,7 +236,7 @@ h2 {
 
 .actions button.secondary {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: inherit;
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 </style>

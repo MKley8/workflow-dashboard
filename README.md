@@ -33,26 +33,48 @@ Firestore), and wrapped for mobile with **Capacitor**.
   each one, grant/revoke admin access or customize exactly which apps that
   account sees and in what order - without needing that person's password
   or session.
+- **Themes** - pick from four built-in themes (Midnight, Slate, Sunset,
+  Light) in **Settings**; the choice is saved to the account and applied
+  everywhere, including a flash-free load via a cached local copy.
+- **Sidebar navigation** - a clickable left sidebar (collapsible into a
+  drawer on mobile) replaces a traditional top navbar, using sleek
+  [Material Symbols](https://fonts.google.com/icons) icons instead of emoji.
+- **Settings page** - per-account theme picker and self-service account
+  deletion.
+- **To-Do list** - a sidebar-accessible page for personal or admin-assigned
+  tasks. Tasks can link to specific catalog apps - hovering that app's tile
+  shows its active linked tasks. Checking a task off moves it to a "Done"
+  section. This page also hosts sending free-text requests to admins
+  (capped at 5 pending at a time).
+- **Member vs. admin app permissions** - any signed-in user can add an app,
+  but only admins (or whoever added it, if not an admin) can remove one.
+  Members editing an admin-added ("admin-given") app can only rename it and
+  change its sign-in method; every other field is admin-only.
 
 ## Project structure
 
 ```
 src/
-  types/app.ts          WorkflowApp data model
-  types/user.ts           UserProfile data model (email + isAdmin)
+  types/app.ts          WorkflowApp data model (incl. ownerIsAdmin)
+  types/user.ts           UserProfile data model (email + isAdmin + theme)
+  types/theme.ts          Theme ids/options
+  types/adminRequest.ts   AdminRequest data model + the 5-pending cap
+  types/todo.ts           TodoItem data model
   data/defaultApps.ts    Seed catalog (used to populate Firestore once)
   firebase.ts             Firebase app/auth/firestore initialization
   services/
-    authService.ts        Firebase Auth wrappers
-    userService.ts          Account profiles: create/list/promote-demote admin
+    authService.ts        Firebase Auth wrappers (incl. account deletion)
+    userService.ts          Account profiles: create/list/promote-demote admin, theme
     appsService.ts         Firestore CRUD + realtime subscription (shared catalog)
     appLayoutService.ts     Per-account app visibility/order overrides (admin-managed)
+    adminRequestService.ts  Free-text requests from accounts to admins
+    todoService.ts          To-do tasks: create/subscribe/toggle-done/delete
     platformRedirect.ts     Native-app-first launch logic (the "redirect")
     nativeChrome.ts         Status bar / splash screen for the mobile shell
-  stores/                 Pinia stores (auth, apps, admin)
-  router/                 Vue Router (login/dashboard/manage/admin guards)
-  components/             AppTile, AppGrid, NavBar, AddEditAppModal, EditUserLayoutModal
-  views/                  LoginView, DashboardView, ManageAppsView, AdminView
+  stores/                 Pinia stores (auth, apps, admin, adminRequests, todos, theme)
+  router/                 Vue Router (login/dashboard/manage/admin/settings/todos guards)
+  components/             AppTile, AppGrid, Sidebar, AddEditAppModal, EditUserLayoutModal
+  views/                  LoginView, DashboardView, ManageAppsView, AdminView, SettingsView, TodosView
 capacitor.config.ts       Capacitor (mobile wrapper) configuration
 firestore.rules            Firestore security rules
 ```
@@ -93,11 +115,12 @@ Google), and the dashboard will load.
 
 ## 3. Adding / removing apps
 
-Go to **Manage Apps** in the nav bar:
+Go to **Manage Apps** in the sidebar:
 
 - **Add App**: name, URL, description, category, brand colour, optional
   icon URL, sign-in method, and optional native-redirect hints (iOS URL
-  scheme / App Store id, Android package / Play Store id).
+  scheme / App Store id, Android package / Play Store id). Any signed-in
+  account can add an app.
 - **Sign-in method**: choose **Username / Email** and store a hint (e.g.
   the login you use for that site) or **Sign in with Google** if the site
   offers Google sign-in - it will be tied to whichever Google account you
@@ -107,6 +130,12 @@ Go to **Manage Apps** in the nav bar:
 - **Edit**: click Edit on any row.
 - **Enable/disable**: toggle the checkbox without deleting the entry.
 - **Remove**: click Remove (with confirmation).
+- **Member vs. admin permissions**: apps added by an admin are marked
+  **Admin-given**. Regular (non-admin) members can rename an admin-given
+  app and change its sign-in method, but can't edit its other fields,
+  disable it, or remove it - only an admin can. Apps added by a regular
+  member have no such restriction (any signed-in account can fully manage
+  them, matching the original behaviour).
 
 Because this is all backed by Firestore, changes are visible to every
 signed-in user instantly, on both the web app and any mobile app builds -
@@ -117,11 +146,14 @@ no rebuild required.
 Admins can search every account and control both who else is an admin and
 what each account's dashboard looks like.
 
-**Publish the updated rules first:** this feature relies on the `isAdmin`
-checks in [`firestore.rules`](./firestore.rules). Re-publish them any time
-you update that file - Firestore Database -> Rules tab -> paste the file's
-contents -> Publish (or `firebase deploy --only firestore:rules` if you
-have the Firebase CLI set up).
+**Publish the updated rules first:** this feature (and the To-Do page's
+task assignment/admin requests/account deletion) relies on the checks in
+[`firestore.rules`](./firestore.rules), including the `adminRequests` and
+`todos` collections, the `apps` field-level restrictions, and self-delete
+permissions. Re-publish them any time you update that file - Firestore
+Database -> Rules tab -> paste the file's contents -> Publish (or
+`firebase deploy --only firestore:rules` if you have the Firebase CLI set
+up).
 
 **Bootstrapping the very first admin:** no account starts as an admin, and
 by design no account can promote itself (the rules explicitly block
@@ -134,7 +166,7 @@ Firebase console:
    `users` collection, and find the document whose id matches your account
    (check the `email` field to confirm).
 3. Edit that document's `isAdmin` field to `true`.
-4. Reload the dashboard - an **Admin** link now appears in the nav bar.
+4. Reload the dashboard - an **Admin** link now appears in the sidebar.
 
 From then on, that admin (or any admin they promote from the **Admin**
 screen) can promote/demote other accounts - no more manual console edits
@@ -142,16 +174,62 @@ needed.
 
 **Using the Admin screen:**
 
-- **Search** accounts by email.
-- **Make admin / Remove admin**: toggles that account's admin access.
-- **Edit Layout**: choose exactly which apps a specific account sees on
-  their dashboard, and reorder them with the arrow buttons. Apps left
-  unchecked simply don't appear for that account, without touching the
-  shared catalog (their own copy in **Manage Apps** is untouched, and other
-  accounts are unaffected). Only admins can edit any account's layout;
-  regular accounts cannot edit their own.
+- **Accounts tab** - search accounts by name or email, **Make admin /
+  Remove admin** to toggle admin access, and **Edit Layout** to choose
+  exactly which apps a specific account sees on their dashboard and
+  reorder them with the arrow buttons. Apps left unchecked simply don't
+  appear for that account, without touching the shared catalog. Only
+  admins can edit any account's layout; regular accounts cannot edit their
+  own.
+- **Requests tab** - every request sent from the **To-Do** page's "Request
+  an admin" form, across all accounts. Click **Mark as read** to
+  acknowledge one - this frees up a slot for that account to send another
+  (see below).
 
-## 5. Mobile app (Capacitor)
+## 5. To-Do list
+
+Every account has a **To-Do** page (in the sidebar, with a badge showing
+its active task count) plus a collapsible **Active Tasks** dropdown built
+into the sidebar itself (expanded by default) for quick access/completion
+from anywhere:
+
+- Click **+ Add Task** in the page's top banner to expand a form panel to
+  the right of the task list (stacks below it on narrow screens).
+- **Add a task**: a title, optional description, and optionally one or
+  more linked apps from the catalog. Admins additionally get a multi-select
+  **Assign to** list to create a task for one or more other accounts (or
+  themselves); regular accounts can only create tasks for themselves. Only
+  admins can assign tasks to other people at all.
+- **Linked apps**: hovering a linked app's tile on the **Dashboard** shows
+  a small popover listing that app's active (not-done) linked tasks, and
+  the tile shows a small dot indicator when it has any.
+- **Active / Done**: checking a task's checkbox (from the To-Do page or
+  directly from the sidebar dropdown) marks it done and moves it into the
+  **Done** section; unchecking moves it back.
+
+## 6. Settings: themes, layout, admin requests, and account deletion
+
+Every account has a **Settings** page (in the sidebar) with:
+
+- **Theme** - pick from four built-in themes (Midnight, Slate, Sunset,
+  Light). The choice is saved to the account (so it follows you to other
+  devices) and cached locally for an instant, flash-free load next time.
+- **Fill full width for each dashboard category section** - off by
+  default, so category sections on the **Dashboard** stay compact and
+  wrap multiple per row instead of each stretching across the whole page;
+  turn it on to restore the traditional one-category-per-row layout.
+- **Request an admin** - search for an admin by name/email and send them a
+  free-text message (e.g. "please make me an admin" or "please fix my
+  layout"). Each account can have at most 5 pending (unread) requests at
+  once - delete one of your own below the form, or wait for an admin to
+  mark one as read, to free up a slot for a new one.
+- **Delete account** - permanently deletes the signed-in account: its
+  Firestore profile, dashboard layout, and pending requests, plus the
+  underlying Firebase Auth user. Requires typing your email to confirm.
+  If Firebase reports the sign-in is too old for this sensitive action,
+  sign out, sign back in, and try again.
+
+## 7. Mobile app (Capacitor)
 
 The web build is reused as the mobile app's UI. First build the web
 assets, then add the native platform(s) you need:
@@ -199,7 +277,27 @@ When the dashboard is running inside the Capacitor mobile app
 
 On the plain web build, tiles simply open the URL in a new tab.
 
-## 6. Build for production (web)
+## 8. Reducing Firestore read costs
+
+Two complementary layers keep billed document reads down:
+
+- **Persistent local cache** ([`firebase.ts`](./src/firebase.ts)) - Firestore
+  is initialized with an IndexedDB-backed, multi-tab persistent cache. Every
+  realtime `onSnapshot` listener (apps, per-user layout, to-dos, admin
+  requests) resumes from the on-disk cache on reload or in a new tab instead
+  of re-reading every document from the server, and data stays available
+  offline. Falls back to the default in-memory cache automatically if the
+  browser can't support persistence (e.g. some private-browsing modes).
+- **Session-cached one-time reads** - the admin directory (used by the
+  Admin screen, and by "Assign to" / "Request an admin" lookups) is fetched
+  at most once per session via [`stores/admin.ts`](./src/stores/admin.ts):
+  concurrent callers await the same in-flight request, and the admins-only
+  subset is derived for free from the already-cached full list when an
+  admin has it, rather than running a second query. Call `loadAccounts(true)`
+  to force a refresh if you suspect accounts changed elsewhere during a
+  long session.
+
+## 9. Build for production (web)
 
 ```
 npm run build

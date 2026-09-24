@@ -8,7 +8,7 @@ import {
   subscribeToApps,
   updateApp,
 } from '../services/appsService'
-import { subscribeToUserLayout, type AppLayoutEntry } from '../services/appLayoutService'
+import { setMyAppVisibility, subscribeToUserLayout, type AppLayoutEntry } from '../services/appLayoutService'
 import { openWorkflowApp } from '../services/platformRedirect'
 import { useAuthStore } from './auth'
 
@@ -35,6 +35,11 @@ export const useAppsStore = defineStore('apps', {
     enabledApps: (state) => state.apps.filter((app) => app.enabled),
     sortedApps: (state) =>
       [...state.apps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    /** Whether the signed-in user has personally hidden this app from their own dashboard. */
+    isHiddenForMe:
+      (state) =>
+      (appId: string): boolean =>
+        state.myLayout[appId]?.enabled === false,
     /**
      * Apps to show on the signed-in user's own dashboard: the shared
      * catalog with that user's admin-managed visibility/order overrides
@@ -88,13 +93,21 @@ export const useAppsStore = defineStore('apps', {
       this.myLayout = {}
     },
     async create(input: WorkflowAppInput) {
-      await addApp(input)
+      // Always derive ownerIsAdmin from the current session (never trust
+      // the caller), so member- vs admin-added apps are tracked correctly.
+      await addApp({ ...input, ownerIsAdmin: useAuthStore().isAdmin })
     },
     async update(id: string, changes: Partial<WorkflowAppInput>) {
       await updateApp(id, changes)
     },
     async remove(id: string) {
       await removeApp(id)
+    },
+    /** Hides/shows an app on just the signed-in user's own dashboard (self-service). */
+    async setMyVisibility(appId: string, enabled: boolean) {
+      const uid = useAuthStore().user?.uid
+      if (!uid) return
+      await setMyAppVisibility(uid, appId, enabled)
     },
     /** Opens an app, redirecting to its native mobile app when available. */
     async launch(app: WorkflowApp) {

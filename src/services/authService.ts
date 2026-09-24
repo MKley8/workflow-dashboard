@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -57,4 +58,15 @@ export async function register(email: string, password: string): Promise<User> {
 
 export async function signOut(): Promise<void> {
   await firebaseSignOut(auth)
+}
+
+/**
+ * Permanently deletes the signed-in Firebase Auth user. Firebase requires a
+ * "recent" sign-in for this sensitive operation; if the session is old this
+ * throws with code `auth/requires-recent-login` - callers should ask the
+ * user to sign out and back in, then retry.
+ */
+export async function deleteCurrentUser(): Promise<void> {
+  if (!auth.currentUser) throw new Error('No signed-in user to delete.')
+  await deleteUser(auth.currentUser)
 }

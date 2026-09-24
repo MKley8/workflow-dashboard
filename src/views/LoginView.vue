@@ -51,6 +51,9 @@ async function submitWithGoogle() {
 <template>
   <div class="login">
     <form class="card" @submit.prevent="submit">
+      <div class="brand">
+        <span class="brand__logo">WF</span>
+      </div>
       <h1>Workflow Dashboard</h1>
       <p class="subtitle">Sign in to access your team's apps</p>
 
@@ -92,28 +95,54 @@ async function submitWithGoogle() {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  background: radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 55%),
+    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 55%),
+    var(--bg);
 }
 
 .card {
   width: 100%;
   max-width: 360px;
-  background: #1c212b;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: -0.25rem;
+}
+
+.brand__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
 }
 
 h1 {
   font-size: 1.4rem;
   margin: 0;
+  text-align: center;
 }
 
 .subtitle {
   margin: 0 0 0.5rem;
-  color: rgba(245, 246, 250, 0.6);
+  color: var(--text-muted);
   font-size: 0.85rem;
+  text-align: center;
 }
 
 label {
@@ -126,19 +155,24 @@ label {
 input {
   padding: 0.6rem 0.7rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #10141c;
-  color: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 button[type='submit'] {
   padding: 0.65rem;
   border-radius: 8px;
   border: none;
-  background: #4f46e5;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+button[type='submit']:hover {
+  filter: brightness(1.08);
 }
 
 button[type='submit']:disabled {
@@ -149,13 +183,13 @@ button[type='submit']:disabled {
 .link {
   background: none;
   border: none;
-  color: rgba(245, 246, 250, 0.7);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 0.8rem;
 }
 
 .error {
-  color: #f87171;
+  color: var(--danger);
   font-size: 0.8rem;
   margin: 0;
 }
@@ -167,11 +201,16 @@ button[type='submit']:disabled {
   gap: 0.6rem;
   padding: 0.65rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border);
   background: #fff;
   color: #1f2328;
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.google-btn:hover {
+  filter: brightness(0.97);
 }
 
 .google-btn:disabled {
@@ -196,7 +235,7 @@ button[type='submit']:disabled {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: rgba(245, 246, 250, 0.4);
+  color: var(--text-muted-2);
   font-size: 0.75rem;
   text-transform: uppercase;
 }
@@ -206,6 +245,6 @@ button[type='submit']:disabled {
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--border);
 }
 </style>
