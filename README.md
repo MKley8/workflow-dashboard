@@ -1,5 +1,7 @@
 # Workflow Dashboard
 
+[![CI](https://github.com/MKley8/workflow-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/MKley8/workflow-dashboard/actions/workflows/ci.yml)
+
 A modular, mobile-ready dashboard that gathers a team's workflow web apps
 (scheduling, HR, compliance, operations, etc.) into a single home screen.
 Built with **Vue 3 + TypeScript + Vite**, backed by **Firebase** (Auth +
